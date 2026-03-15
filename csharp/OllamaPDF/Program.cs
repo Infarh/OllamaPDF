@@ -3,6 +3,8 @@ using System.Text.Json;
 
 using Ollama;
 
+using UglyToad.PdfPig;
+
 const string model_name = "mistral:latest";
 
 const string data_path = @"d:\123\pdf";
@@ -14,7 +16,10 @@ if (!data_dir.Exists)
     return -1;
 }
 
-const int max_text_len = 5000; // Максимальный размер текста, читаемый из файла
+const int max_text_len = 5000;     // Максимальный размер текста, читаемый из файла
+const int max_attempts = 3;        // число попыток обращения к модели
+const int request_timeout_sec = 30; // таймаут одного запроса к модели в секундах
+
 var file_text = new StringBuilder(max_text_len * 2);
 
 
@@ -22,7 +27,7 @@ foreach (var data_file in data_dir.EnumerateFiles("*.pdf", SearchOption.AllDirec
 {
     Console.WriteLine($"Обработка файла {data_file.RelativePath(data_dir)}");
     Console.WriteLine($"                   размер: {data_file.Length.ToDataLen(out var unit),6:N2} {unit}");
-    var pdf = UglyToad.PdfPig.PdfDocument.Open(data_file.FullName);
+    var pdf = PdfDocument.Open(data_file.FullName, new ParsingOptions { UseLenientParsing = true });
     Console.WriteLine($"            число страниц: {pdf.NumberOfPages}");
 
     file_text.Clear();
@@ -45,7 +50,8 @@ foreach (var data_file in data_dir.EnumerateFiles("*.pdf", SearchOption.AllDirec
     using var ollama = new OllamaApiClient();
 
     Console.WriteLine("   Запрос имени и описания у модели...");
-    var response = await ollama.Completions.GenerateCompletionAsync(new()
+
+    var api_request = new GenerateCompletionRequest
     {
         Model = model_name,
         Format = ResponseFormatEnum.Json,
@@ -67,15 +73,39 @@ foreach (var data_file in data_dir.EnumerateFiles("*.pdf", SearchOption.AllDirec
         - Write the summary in Russian.
 
         Respond ONLY with a valid JSON object in this exact format:
-        {"filename": "suggested_filename", "summary": "краткое описание на русском"
+        {"filename": "suggested_filename", "summary": "краткое описание на русском"}
 
         Book text:
         {{file_text}}
         """,
         Stream = false,
-    });
+    };
 
-    var result = response.Response ?? string.Empty;
+    string? model_result = null;
+    for (var attempt = 1; attempt <= max_attempts; attempt++)
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(request_timeout_sec));
+            var r = await ollama.Completions.GenerateCompletionAsync(api_request, cts.Token);
+            model_result = r.Response;
+            break;
+        }
+        catch (OperationCanceledException)
+        {
+            if (attempt < max_attempts)
+                Console.WriteLine($"   [{attempt}/{max_attempts}] Таймаут запроса. Повтор...");
+        }
+    }
+
+    if (model_result is null)
+    {
+        Console.WriteLine($"   Не удалось получить ответ от модели за {max_attempts} попытки(-ок). Файл пропущен.");
+        Console.WriteLine();
+        continue;
+    }
+
+    var result = model_result;
 
     string suggested_name;
     string summary;
