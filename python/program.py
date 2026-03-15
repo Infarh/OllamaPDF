@@ -19,6 +19,15 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 
 
 def to_data_len(num_bytes: int) -> tuple[float, str]:
+	"""Преобразует размер в байтах в человеко-читаемое значение.
+
+	Параметры:
+		num_bytes (int): Размер данных в байтах.
+
+	Возвращаемое значение:
+		tuple[float, str]: Кортеж из числового значения размера и единицы измерения
+		("Б", "кБ", "МБ" или "ГБ").
+	"""
 	if num_bytes >= 1 << 30:
 		return num_bytes / float(1 << 30), "ГБ"
 	if num_bytes >= 1 << 20:
@@ -28,18 +37,32 @@ def to_data_len(num_bytes: int) -> tuple[float, str]:
 	return float(num_bytes), "Б"
 
 
-def enum_lines(text: str) -> Iterator[str]:
-	yield from text.splitlines()
-
-
 def ident_lines(text: str, indent: str) -> str:
+	"""Добавляет отступ к каждой непустой строке текста.
+
+	Параметры:
+		text (str): Текст, который нужно форматировать.
+		indent (str): Строка-отступ, добавляемая в начало непустых строк.
+
+	Возвращаемое значение:
+		str: Текст с добавленными отступами для непустых строк.
+	"""
 	out: list[str] = []
-	for line in enum_lines(text):
+	for line in text.splitlines():
 		out.append(f"{indent}{line}" if line else "")
 	return "\n".join(out)
 
 
 def cut_text_at_sentence_boundary(text: str, max_len: int) -> str:
+	"""Ограничивает длину текста и по возможности обрезает по границе предложения.
+
+	Параметры:
+		text (str): Исходный текст.
+		max_len (int): Максимально допустимая длина результата.
+
+	Возвращаемое значение:
+		str: Обрезанный текст длиной не более max_len символов.
+	"""
 	if len(text) <= max_len:
 		return text
 	cut_text = text[:max_len]
@@ -50,6 +73,15 @@ def cut_text_at_sentence_boundary(text: str, max_len: int) -> str:
 
 
 def extract_pdf_text(pdf_path: Path, max_len: int) -> str:
+	"""Извлекает текст из PDF с ограничением максимальной длины.
+
+	Параметры:
+		pdf_path (Path): Путь к PDF-файлу.
+		max_len (int): Максимальная длина возвращаемого текста.
+
+	Возвращаемое значение:
+		str: Текст из PDF, ограниченный max_len и обрезанный по границе предложения.
+	"""
 	reader = PdfReader(str(pdf_path), strict=False)
 	chunks: list[str] = []
 	current_len = 0
@@ -69,6 +101,15 @@ def extract_pdf_text(pdf_path: Path, max_len: int) -> str:
 
 
 def request_ollama(prompt: str) -> str | None:
+	"""Отправляет запрос в Ollama и возвращает текст ответа модели.
+
+	Параметры:
+		prompt (str): Подготовленный промпт для модели.
+
+	Возвращаемое значение:
+		str | None: Содержимое поля response из ответа Ollama, либо None,
+		если запрос не удался после всех попыток.
+	"""
 	payload = {
 		"model": MODEL_NAME,
 		"prompt": prompt,
@@ -93,6 +134,14 @@ def request_ollama(prompt: str) -> str | None:
 
 
 def build_prompt(book_text: str) -> str:
+	"""Формирует промпт для генерации имени файла и краткого описания книги.
+
+	Параметры:
+		book_text (str): Извлечённый текст книги из PDF.
+
+	Возвращаемое значение:
+		str: Полный текст промпта для отправки в Ollama.
+	"""
 	return f"""Analyze the PDF book text below and provide a filename and a summary.
 
 Filename requirements:
@@ -118,6 +167,15 @@ Book text:
 
 
 def main() -> int:
+	"""Точка входа: обрабатывает PDF-файлы и запрашивает у модели метаданные.
+
+	Параметры:
+		Нет.
+
+	Возвращаемое значение:
+		int: Код завершения процесса (0 при успешном завершении, -1 если
+		не найдена директория с входными PDF-файлами).
+	"""
 	if not DATA_PATH.exists() or not DATA_PATH.is_dir():
 		print("Директория не существует")
 		return -1
