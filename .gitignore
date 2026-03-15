@@ -1,0 +1,78 @@
+﻿# ──────────────────────────────────────────
+#  Visual Studio / MSBuild / .NET
+# ──────────────────────────────────────────
+.vs/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.VC.opendb
+
+# Результаты публикации и пакеты NuGet
+[Pp]ublish/
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+packages/
+!**/packages/repositories.config
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Кэш сборки и тесты
+TestResults/
+coverage*.xml
+*.coverage
+*.coveragexml
+BenchmarkDotNet.Artifacts/
+
+# ──────────────────────────────────────────
+#  JetBrains Rider / ReSharper
+# ──────────────────────────────────────────
+.idea/
+_ReSharper*/
+*.DotSettings.user
+*.resharper
+
+# ──────────────────────────────────────────
+#  Python
+# ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv/
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyo
+
+# ──────────────────────────────────────────
+#  OS
+# ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
